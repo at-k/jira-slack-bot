@@ -3,6 +3,7 @@ import os
 import shlex
 
 import donburijira
+import handler
 
 # load param from env
 auth_user = os.environ["JIRA_AUTH_USER"]
@@ -13,6 +14,7 @@ jira_project_name = os.environ["JIRA_PROJECT_NAME"]
 slack_verification_token = os.environ['SLACK_VERIFICATION_TOKEN']
 slack_team_id = os.environ['SLACK_TEAM_ID']
 
+# init modules
 donburi = donburijira.DonburiJira(jira_server_url, jira_project_name, auth_user, token)
 handler = handler.DonburiHandler(donburi, slack_verification_token, slack_team_id)
 handler.init_member_info("./member.json")
@@ -48,9 +50,9 @@ if __name__ == '__main__':
     # -- test jira
     # search issues
     issues = donburi.labeled_issues(label = "ask_SRE", resolutiondate = '-90d')
-    # donburi.print_issues(issues)
-    marked_issues = donburi.list_unlabeled_issues(issues, "ask_SRE")
-    donburi.print_issues(marked_issues)
+    donburi.print_issues(issues)
+    # marked_issues = donburi.list_unlabeled_issues(issues, "ask_SRE")
+    # donburi.print_issues(marked_issues)
 
     # start server
-    app.run()
+    # app.run()
