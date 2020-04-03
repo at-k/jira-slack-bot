@@ -1,87 +1,56 @@
-from jira import JIRA
+from flask import abort, Flask, jsonify, request
 import os
+import shlex
 
+import donburijira
 
-class DonburiJira:
-    def __init__(self, server, project, auth_user, auth_key):
-        self.project = project
-        self.issue_url_base = server.rstrip("/") + '/browse/'
-        self.jira = JIRA({'server': server}, basic_auth=(auth_user, auth_key))
+# load param from env
+auth_user = os.environ["JIRA_AUTH_USER"]
+token = os.environ["JIRA_API_KEY"]
+jira_server_url = os.environ["JIRA_SERVER_URL"]
+jira_project_name = os.environ["JIRA_PROJECT_NAME"]
 
-    def create_issue(owner, summary, description, issuetype='Task'):
-        account_id = self.jira.search_users(owner, maxResults=1)[0].accountId
-        issue = self.jira.create_issue(project=self.project,
-                                      summary=summary,
-                                      description=description,
-                                      assignee={'accountId': account_id},
-                                      issuetype={'name': issuetype})
-        return issue
+slack_verification_token = os.environ['SLACK_VERIFICATION_TOKEN']
+slack_team_id = os.environ['SLACK_TEAM_ID']
 
-    def add_to_epic(epic, issue):
-        # add ticket to epic
-        self.jira.add_issues_to_epic(epic_id=epic.id, issue_keys=[issue.key])
+donburi = donburijira.DonburiJira(jira_server_url, jira_project_name, auth_user, token)
+handler = handler.DonburiHandler(donburi, slack_verification_token, slack_team_id)
+handler.init_member_info("./member.json")
 
-        # take over labels from epic
-        labels = epic.fields.labels
-        issue.fields.labels.extend(labels)
-        issue.update(fields={"labels": issue.fields.labels})
+# flask setup
+app = Flask(__name__)
+app.route('/waremado', methods=['POST'])
+def waremado():
+    if not handler.is_request_valid(request):
+        abort(400)
 
-    def add_label(issue, label):
-        issue.fields.labels.append(label)
-        issue.update(fields={"labels": issue.fields.labels})
+    user_id = request.form['user_id']
+    command = request.form['command']
+    response_url = request.form['response_url']
+    trigger_id = request.form['trigger_id']
 
-    def search_issues(self, query):
-        issues = []
-        block_size = 100
-        idx = 0
-        while True:
-            issues_tmp = self.jira.search_issues(query, idx, block_size)
-            if len(issues_tmp) == 0:
-                break
-            idx = idx + len(issues_tmp)
-            issues = issues + issues_tmp
-        return sorted(issues, key=lambda u: str(u.fields.assignee))
+    args = unidecode(request.form['text'])
+    args = shlex.split(args)
+    subcommand = args[0]
 
-    def labeled_issues(self, label, resolution='Done', resolutiondate='-60d'):
-        query = f"project = {self.project} AND " \
-                f"labels in (\"{label}\") AND " \
-                f"resolution = {resolution} AND " \
-                f"status != \"Canceled\" AND " \
-                f"resolutiondate > {resolutiondate}"
-                #f"updatedDate > {updatedDate}"
-        return self.search_issues(query)
+    text = ''
 
-    def print_issues(self, issues):
-        for issue in issues:
-            url = self.issue_url_base + issue.key
-            labels = issue.fields.labels
-            if issue.fields.assignee is not None:
-                assignee = issue.fields.assignee.displayName
-            else:
-                assignee = "None"
-            print(f"{url}, {labels}, {assignee}")
+    if not handler.create_issue(response_url):
+        abort(400)
 
-    def list_unlabeled_issues(self, issues, exclude_label):
-        marked_issues = []
-        for issue in issues:
-            labels = issue.fields.labels
-            if len(labels) == 0 or (len(labels) == 1 and labels[0] == exclude_label):
-                marked_issues.append(issue)
-        return marked_issues
+    return jsonify(
+        response_type='in_channel',
+        text=text,
+    )
 
-
+# main
 if __name__ == '__main__':
-    # load param from env
-    auth_user = os.environ["JIRA_AUTH_USER"]
-    token = os.environ["JIRA_API_KEY"]
-    jira_server_url = os.environ["JIRA_SERVER_URL"]
-    jira_project_name = os.environ["JIRA_PROJECT_NAME"]
-
-    # init jira
-    donburi = DonburiJira(jira_server_url, jira_project_name, auth_user, token)
-
+    # -- test jira
     # search issues
     issues = donburi.labeled_issues(label = "ask_SRE", resolutiondate = '-90d')
     # donburi.print_issues(issues)
     marked_issues = donburi.list_unlabeled_issues(issues, "ask_SRE")
     donburi.print_issues(marked_issues)
+
+    # start server
+    app.run()
