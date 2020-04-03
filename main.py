@@ -5,6 +5,7 @@ import os
 class DonburiJira:
     def __init__(self, server, project, auth_user, auth_key):
         self.project = project
+        self.issue_url_base = server.rstrip("/") + '/browse/'
         self.jira = JIRA({'server': server}, basic_auth=(auth_user, auth_key))
 
     def create_issue(owner, summary, description, issuetype='Task'):
@@ -25,9 +26,48 @@ class DonburiJira:
         issue.fields.labels.extend(labels)
         issue.update(fields={"labels": issue.fields.labels})
 
-    def search_issues(query):
-        return self.jira.search_issues(query)
+    def add_label(issue, label):
+        issue.fields.labels.append(label)
+        issue.update(fields={"labels": issue.fields.labels})
 
+    def search_issues(self, query):
+        issues = []
+        block_size = 100
+        idx = 0
+        while True:
+            issues_tmp = self.jira.search_issues(query, idx, block_size)
+            if len(issues_tmp) == 0:
+                break
+            idx = idx + len(issues_tmp)
+            issues = issues + issues_tmp
+        return sorted(issues, key=lambda u: str(u.fields.assignee))
+
+    def labeled_issues(self, label, resolution='Done', resolutiondate='-60d'):
+        query = f"project = {self.project} AND " \
+                f"labels in (\"{label}\") AND " \
+                f"resolution = {resolution} AND " \
+                f"status != \"Canceled\" AND " \
+                f"resolutiondate > {resolutiondate}"
+                #f"updatedDate > {updatedDate}"
+        return self.search_issues(query)
+
+    def print_issues(self, issues):
+        for issue in issues:
+            url = self.issue_url_base + issue.key
+            labels = issue.fields.labels
+            if issue.fields.assignee is not None:
+                assignee = issue.fields.assignee.displayName
+            else:
+                assignee = "None"
+            print(f"{url}, {labels}, {assignee}")
+
+    def list_unlabeled_issues(self, issues, exclude_label):
+        marked_issues = []
+        for issue in issues:
+            labels = issue.fields.labels
+            if len(labels) == 0 or (len(labels) == 1 and labels[0] == exclude_label):
+                marked_issues.append(issue)
+        return marked_issues
 
 
 if __name__ == '__main__':
@@ -36,8 +76,12 @@ if __name__ == '__main__':
     token = os.environ["JIRA_API_KEY"]
     jira_server_url = os.environ["JIRA_SERVER_URL"]
     jira_project_name = os.environ["JIRA_PROJECT_NAME"]
-    issue_url_base = jira_url.rstrip("/") + '/browse/'
 
     # init jira
     donburi = DonburiJira(jira_server_url, jira_project_name, auth_user, token)
 
+    # search issues
+    issues = donburi.labeled_issues(label = "ask_SRE", resolutiondate = '-90d')
+    # donburi.print_issues(issues)
+    marked_issues = donburi.list_unlabeled_issues(issues, "ask_SRE")
+    donburi.print_issues(marked_issues)
