@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from flask import abort, Flask, jsonify, request
 import os
 import shlex
@@ -49,7 +50,8 @@ def waremado():
 if __name__ == '__main__':
     # -- test jira
     # search issues
-    issues = donburi.labeled_issues(label = "ask_SRE", resolutiondate = '-90d')
+    # issues = donburi.labeled_issues(label = "ask_SRE", resolutiondate = '-90d')
+    issues = donburi.epiced_issues(epic_name = u"割れ窓", createdDate = '-90d')
     donburi.print_issues(issues)
     # marked_issues = donburi.list_unlabeled_issues(issues, "ask_SRE")
     # donburi.print_issues(marked_issues)

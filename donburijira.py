@@ -49,6 +49,12 @@ class DonburiJira:
                 #f"updatedDate > {updatedDate}"
         return self.search_issues(query)
 
+    def epiced_issues(self, epic_name, createdDate='-60d'):
+        query = f"project = {self.project} AND " \
+                f"\"Epic Link\" = {epic_name} AND " \
+                f"createdDate > {createdDate}"
+        return self.search_issues(query)
+
     def print_issues(self, issues):
         for issue in issues:
             url = self.issue_url_base + issue.key
@@ -57,7 +63,10 @@ class DonburiJira:
                 assignee = issue.fields.assignee.displayName
             else:
                 assignee = "None"
-            print(f"{url}, {labels}, {assignee}")
+            summary = issue.fields.summary
+            status = issue.fields.status
+            resolution = issue.fields.resolution
+            print(f"{url}, {labels}, {assignee}, {summary}, {resolution}")
 
     def list_unlabeled_issues(self, issues, exclude_label):
         marked_issues = []
