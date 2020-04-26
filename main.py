@@ -22,7 +22,23 @@ handler.init_member_info("./member.json")
 
 # flask setup
 app = Flask(__name__)
-app.route('/waremado', methods=['POST'])
+
+# routing
+@app.route('/test', methods=['GET'])
+def waremado_test():
+    handler.create_issue(
+            slack_user ="U8MBLE3DF",
+            # epic_id = "DONBURI-1770",
+            epic_id = "DONBURI-7699",
+            labels = [""],
+            # labels = ["ask_SRE"],
+            summary = "test",
+            description = "test",
+            response_url = "")
+
+    return "ok"
+
+@app.route('/jira', methods=['POST'])
 def waremado():
     if not handler.is_request_valid(request):
         abort(400)
@@ -37,8 +53,50 @@ def waremado():
     subcommand = args[0]
 
     text = ''
+    if subcommand == 'create':
+        if len(args) < 2:
+            text = f'error: illegal arguments'
+        else:
+            if args[1] == "ask":
+                labels=["ask_SRE"]
+            elif args[1] == "mado":
+                epic_id="DONBURI-7699"
+            elif args[1] == "trouble":
+                epic_id="DONBURI-1770"
+            else:
+                text = f'error: invalid issue category {{ args[1] }}'
 
-    if not handler.create_issue(response_url):
+            if text == '':
+                summary = args[1]
+                description = args[2]
+                handler.create_issue(slack_user=user_id,
+                        epic_id=epic_id, labels=labels,
+                        summary=summary, description=description,
+                        response_url=response_url)
+                text = 'request accept'
+
+    elif subcommand == 'list':
+        if len(args) < 2:
+            text = f'error: illegal arguments'
+        else:
+            if args[1] == "ask":
+                labels=["ask_SRE"]
+            elif args[1] == "mado":
+                epic_id="DONBURI-7699"
+            elif args[1] == "trouble":
+                epic_id="DONBURI-1770"
+            else:
+                text = f'error: invalid issue category {args[1]}'
+
+            if text == '':
+                handler.search_issues(epic_id=epic_id, labels=labels,
+                        response_url=response_url)
+                text = 'request accept'
+
+
+    elif subcommand == 'help':
+        text=f'todo'
+    else:
         abort(400)
 
     return jsonify(
@@ -46,15 +104,28 @@ def waremado():
         text=text,
     )
 
+
+@app.route('/alert', methods=['POST'])
+def alert():
+    return 200
+
 # main
 if __name__ == '__main__':
     # -- test jira
     # search issues
     # issues = donburi.labeled_issues(label = "ask_SRE", resolutiondate = '-90d')
-    issues = donburi.epiced_issues(epic_name = u"割れ窓", createdDate = '-90d')
-    donburi.print_issues(issues)
+    # issues = donburi.epiced_issues(epic_name = u"割れ窓", createdDate = '-90d')
+    # donburi.print_issues(issues)
     # marked_issues = donburi.list_unlabeled_issues(issues, "ask_SRE")
     # donburi.print_issues(marked_issues)
 
+    # init apps
+    app.logger.debug('debug')
+    app.logger.info('info')
+    app.logger.warn('warn')
+    app.logger.error('error')
+    app.logger.critical('critical')
+
     # start server
     # app.run()
+    app.run(debug=True)

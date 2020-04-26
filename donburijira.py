@@ -6,8 +6,7 @@ class DonburiJira:
         self.issue_url_base = server.rstrip("/") + '/browse/'
         self.jira = JIRA({'server': server}, basic_auth=(auth_user, auth_key))
 
-    def create_issue(owner, summary, description, issuetype='Task'):
-        account_id = self.jira.search_users(owner, maxResults=1)[0].accountId
+    def create_issue(self, account_id, summary, description, issuetype='Task'):
         issue = self.jira.create_issue(project=self.project,
                                       summary=summary,
                                       description=description,
@@ -15,18 +14,23 @@ class DonburiJira:
                                       issuetype={'name': issuetype})
         return issue
 
-    def add_to_epic(epic, issue):
+    def add_to_epic(self, issue, epic_id):
+        epic = self.jira.issue(epic_id)
+        if epic == None:
+            return False
+
         # add ticket to epic
-        self.jira.add_issues_to_epic(epic_id=epic.id, issue_keys=[issue.key])
+        self.jira.add_issues_to_epic(epic_id=epic_id, issue_keys=[issue.key])
 
         # take over labels from epic
         labels = epic.fields.labels
         issue.fields.labels.extend(labels)
         issue.update(fields={"labels": issue.fields.labels})
+        return True
 
-    def add_label(issue, label):
-        issue.fields.labels.append(label)
-        issue.update(fields={"labels": issue.fields.labels})
+    def add_labels(self, issue, labels):
+        tmp_labels = issue.fields.labels + labels
+        issue.update(fields={"labels": tmp_labels})
 
     def search_issues(self, query):
         issues = []
