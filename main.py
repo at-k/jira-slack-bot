@@ -15,6 +15,8 @@ jira_project_name = os.environ["JIRA_PROJECT_NAME"]
 slack_verification_token = os.environ['SLACK_VERIFICATION_TOKEN']
 slack_team_id = os.environ['SLACK_TEAM_ID']
 
+debug_mode = True if 'DEBUG_MODE' in os.environ.keys() else False
+
 # init modules
 donburi = donburijira.DonburiJira(jira_server_url, jira_project_name, auth_user, token)
 handler = handler.DonburiHandler(donburi, slack_verification_token, slack_team_id)
@@ -26,15 +28,15 @@ app = Flask(__name__)
 # routing
 @app.route('/test', methods=['GET'])
 def waremado_test():
-    handler.create_issue(
-            slack_user ="U8MBLE3DF",
-            # epic_id = "DONBURI-1770",
-            epic_id = "DONBURI-7699",
-            labels = [""],
-            # labels = ["ask_SRE"],
-            summary = "test",
-            description = "test",
-            response_url = "")
+    #handler.create_issue(
+    #        slack_user ="U8MBLE3DF",
+    #        # epic_id = "DONBURI-1770",
+    #        epic_id = "DONBURI-7699",
+    #        labels = [""],
+    #        # labels = ["ask_SRE"],
+    #        summary = "test",
+    #        description = "test",
+    #        response_url = "")
 
     return "ok"
 
@@ -93,7 +95,6 @@ def waremado():
                         response_url=response_url)
                 text = 'request accept'
 
-
     elif subcommand == 'help':
         text=f'todo'
     else:
@@ -111,14 +112,6 @@ def alert():
 
 # main
 if __name__ == '__main__':
-    # -- test jira
-    # search issues
-    # issues = donburi.labeled_issues(label = "ask_SRE", resolutiondate = '-90d')
-    # issues = donburi.epiced_issues(epic_name = u"割れ窓", createdDate = '-90d')
-    # donburi.print_issues(issues)
-    # marked_issues = donburi.list_unlabeled_issues(issues, "ask_SRE")
-    # donburi.print_issues(marked_issues)
-
     # init apps
     app.logger.debug('debug')
     app.logger.info('info')
@@ -127,5 +120,4 @@ if __name__ == '__main__':
     app.logger.critical('critical')
 
     # start server
-    # app.run()
-    app.run(debug=True)
+    app.run(debug=debug_mode)
