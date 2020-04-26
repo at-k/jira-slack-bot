@@ -85,7 +85,7 @@ class DonburiHandler:
         # issues = self.donburi_jira.
 
         if webhook_url != "":
-            body = f"{jira_url}/browse/{issue.key}"
+            body = f"now implementing"
             respond_to_slack(webhook_url, body)
 
         return True
