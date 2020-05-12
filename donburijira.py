@@ -6,6 +6,9 @@ class DonburiJira:
         self.issue_url_base = server.rstrip("/") + '/browse/'
         self.jira = JIRA({'server': server}, basic_auth=(auth_user, auth_key))
 
+    def jira_instance(self):
+        return self.jira
+
     def create_issue(self, account_id, summary, description, issuetype='Task'):
         issue = self.jira.create_issue(project=self.project,
                                       summary=summary,
@@ -70,7 +73,7 @@ class DonburiJira:
             summary = issue.fields.summary
             status = issue.fields.status
             resolution = issue.fields.resolution
-            print(f"{url}, {labels}, {assignee}, {summary}, {resolution}")
+            print(f"{url},{assignee},{labels},\"{summary}\",{resolution}")
 
     def list_unlabeled_issues(self, issues, exclude_label):
         marked_issues = []
