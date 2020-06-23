@@ -17,5 +17,5 @@ debug_mode = True if 'DEBUG_MODE' in os.environ.keys() else False
 donburi = donburijira.DonburiJira(jira_server_url, jira_project_name, auth_user, token)
 
 if __name__ == '__main__':
-    issues = donburi.labeled_issues(label = "ask_SRE", resolutiondate='-40d')
+    issues = donburi.labeled_issues(label = "ask_SRE", resolutiondate='-80d')
     donburi.print_issues(issues)
